@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+	http://www.springframework.org/schema/context 
+	http://www.springframework.org/schema/context/spring-context-4.0.xsd
+	http://www.springframework.org/schema/mvc 
+	http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+	http://www.springframework.org/schema/tx 
+	http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+	http://www.springframework.org/schema/aop 
+	http://www.springframework.org/schema/aop/spring-aop-4.0.xsd">
+<!-- 开启spring的注解 -->
+<context:annotation-config></context:annotation-config>
+<context:component-scan base-package="com"></context:component-scan>
+<!-- 配置数据源 -->
+<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+ <property name="driverClassName" value="com.mysql.jdbc.Driver"></property>
+ <property name="url" value="jdbc:mysql:///test"></property>
+ <property name="username" value="root"></property>
+ <property name="password" value="root"></property>
+</bean>
+<bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+ <property name="dataSource" ref="dataSource"></property>
+ <!-- 指定hibernate实体类的位置 -->
+ <property name="packagesToScan">
+  <list>
+   <value>com.bean</value>
+  </list>
+ </property>
+ <property name="hibernateProperties">
+  <props>
+   <prop key="hibernate.hbm2ddl.auto">update</prop>
+   <prop key="hibernate.show_sql">true</prop>
+   <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+  </props>
+ </property>
+</bean>
+<!-- 配置事务管理器  -->
+<bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+  <property name="sessionFactory" ref="sessionFactory"></property>
+</bean>
+<!-- 给事务提供的建议 -->
+<tx:advice id="transactionAdvice" transaction-manager="transactionManager">
+ <tx:attributes>
+ <!-- *表示匹配任意字符  propagation表示事务的传播特性,SUPPORTS表示如果当前线程中有事务则加入，没有则不用-->
+  <tx:method name="list*" propagation="SUPPORTS"/>
+  <tx:method name="get*" propagation="SUPPORTS"/>
+  <tx:method name="save*" propagation="REQUIRED"/>
+  <tx:method name="delete*" propagation="REQUIRED"/>
+  <tx:method name="update*" propagation="REQUIRED"/>
+ </tx:attributes>
+</tx:advice>
+<!--proxy-target-class默认为false表示默认采用jdk动态代理的方式实现aop，如果为true，则表示采用cglib方式生成代理  -->
+<aop:config proxy-target-class="true">
+<!-- 在服务层定义一个切点 -->
+ <aop:pointcut expression="execution(* com.service.*.*(..))" id="pointCut"/>
+ <!-- 使用aop指定建议者和切点各是什么 -->
+ <aop:advisor advice-ref="transactionAdvice" pointcut-ref="pointCut"/>
+</aop:config>
+<!-- 开始事务的注解形式 -->
+<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true"/>
+</beans>
